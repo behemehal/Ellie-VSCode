@@ -1,2 +1,2 @@
-# Ellie-VSCode
-Syntax highlighting &amp; Language Server for Ellie [WIP]
+# Ellie
+Syntax highlighting for Ellie [Work In Progress]

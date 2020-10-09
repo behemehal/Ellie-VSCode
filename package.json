@@ -1,0 +1,50 @@
+{
+    "name": "ellie-lang",
+    "displayName": "Ellie Language",
+    "description": "Syntax highlighting for ellie lang",
+    "version": "0.0.3",
+    "publisher": "behemehal",
+    "license": "LICENSE",
+    "repository": {
+        "type": "git",
+        "url": "git+https://github.com/behemehal/Ellie-VSCode.git"
+    },
+    "engines": {
+        "vscode": "^1.49.0"
+    },
+    "categories": [
+        "Programming Languages"
+    ],
+    "activationEvents": [
+        "onLanguage:ellie"
+    ],
+    "main": "./extension.js",
+    "contributes": {
+        "languages": [{
+            "id": "ellie",
+            "aliases": ["Ellie", "ellie"],
+            "extensions": [".ei",".eiw",".eil"],
+            "configuration": "./language-configuration.json"
+        }],
+        "grammars": [{
+            "language": "ellie",
+            "scopeName": "source.ellie",
+            "path": "./syntaxes/ellie.tmLanguage.json"
+        }],
+        "configuration": {
+            "title": "Ellie Language",
+            "properties": {
+                "ellie.syntaxCheck": {
+                    "type": ["boolean"],
+                    "default": true,
+                    "description": "Enable syntax check"
+                },
+                "ellie.serverLocation": {
+                    "type": ["string", "boolean"],
+                    "default": false,
+                    "description": "Syntax check server location"
+                }
+            }
+        }
+    }
+}
