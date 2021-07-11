@@ -1,2 +1,3 @@
-# Ellie
-Syntax highlighting for Ellie [Work In Progress]
+# Ellie Language Server
+
+Syntax highlighting for Ellie Language, It works automatically when detects ellie file.

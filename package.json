@@ -2,8 +2,10 @@
     "name": "ellie-lang",
     "displayName": "Ellie Language",
     "description": "Syntax highlighting for ellie lang",
-    "version": "0.0.3",
+    "version": "0.1.0",
     "publisher": "behemehal",
+    "icon": "ellie_language.png",
+    "homepage": "https://ellie.behemehal.net",
     "license": "LICENSE",
     "repository": {
         "type": "git",
@@ -16,15 +18,21 @@
         "Programming Languages"
     ],
     "activationEvents": [
-        "onLanguage:ellie"
+        "onLanguage:ellie",
+        "onLanguage:EllieDebugHeaders"
     ],
     "main": "./extension.js",
     "contributes": {
         "languages": [{
             "id": "ellie",
             "aliases": ["Ellie", "ellie"],
-            "extensions": [".ei",".eiw",".eil"],
+            "extensions": [".ei",".eiw",".eil", ".eidbg"],
             "configuration": "./language-configuration.json"
+        },
+        {
+            "id": "EllieDebugHeaders",
+            "aliases": ["Ellie Debug Headers", "EllieDebugHeaders"],
+            "extensions": [".eidbg"]
         }],
         "grammars": [{
             "language": "ellie",

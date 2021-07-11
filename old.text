@@ -1,0 +1,128 @@
+async function map(context, document) {
+  var diagnostics = [];
+  if (document.isUntitled) {
+    // TODO Support unsaved files
+  } else {
+    var uri = document.path ? document : document.uri;
+    var path = document.path ? document.path : document.uri.path;
+    var process = cprocess.spawn(syntaxRuntime, [
+      "--map-errors",
+      path.slice(1),
+    ]);
+    process.stdout.on("data", (data) => {
+      var keypress = () => {
+        syntaxErrors.clear();
+        var error = data.toString().split("*");
+        var errorList = error
+          .map((el, index) =>
+            isEven(index) && index != 0
+              ? false
+              : [el.split("+")[1], error[index + 1].toString().trim().slice(1)]
+          )
+          .filter((x) => x != false)
+          .filter((x) => !isEmpty(x[0]) && !isEmpty(x[1]));
+
+        if (errorList.length !== 0 && data.toString() != "no_error") {
+          for (error in errorList) {
+            var el = errorList[error];
+            var start = {
+              line: Number(el[0].toString().split(":")[0]),
+              colmn: Number(el[0].toString().split(":")[1]),
+            };
+
+            var end = {
+              line: Number(el[0].toString().split(":")[0]) - 1,
+              colmn: Number(el[0].toString().split(":")[1]),
+            };
+
+            start.line != 0 && start.line--;
+            start.colmn != 0 && start.colmn--;
+            end.line != 0 && end.line--;
+            diagnostics.push(
+              new vscode.Diagnostic(
+                new vscode.Range(
+                  new vscode.Position(start.line, start.colmn),
+                  new vscode.Position(end.line, end.colmn)
+                ),
+                el[1],
+                vscode.DiagnosticSeverity.Error
+              )
+            );
+          }
+          syntaxErrors.set(uri, diagnostics);
+        } else {
+          console.log("Clean errors");
+        }
+      };
+      keypressTimer && clearTimeout(keypressTimer);
+      keypressTimer = setTimeout(keypress, keypressSlowdown);
+    });
+    process.on("error", (err) => {
+      console.log(err);
+    });
+  }
+}
+
+
+function ellieInPath() {
+  return new Promise((resolve) => {
+    if (
+      typeof vscode.workspace.getConfiguration("ellie").get("serverLocation") ==
+        "string" &&
+      fs.existsSync(
+        vscode.workspace.getConfiguration("ellie").get("serverLocation")
+      )
+    ) {
+      syntaxRuntime = vscode.workspace
+        .getConfiguration("ellie")
+        .get("serverLocation");
+    } else {
+      if (
+        typeof vscode.workspace
+          .getConfiguration("ellie")
+          .get("serverLocation") == "string"
+      ) {
+        vscode.window.showWarningMessage(
+          "Specified ellie location not available. Falling back to environment variable"
+        );
+      }
+      if (fs.existsSync(__dirname + "\\ellieSyntaxCheck.exe")) {
+        syntaxRuntime = __dirname + "\\ellieSyntaxCheck.exe";
+      } else {
+        if (!elliePathAvailable()) {
+          vscode.window.showWarningMessage("Ellie syntax server not found.");
+        }
+      }
+    }
+
+    var process = cprocess.spawn(syntaxRuntime, ["-v"]);
+    process.stdout.on("data", (data_) => {
+      var data = data_.toString();
+      if (data.slice(0, data.length - 1) !== requiredEllieVersion) {
+        if (isCustomServer) {
+          vscode.window.showWarningMessage(
+            `Custom syntax check server is outdated [${requiredEllieVersion} > ${data}] Syntax check disabled`
+          );
+          syntaxCheckDisabled = true;
+        } else {
+          vscode.window.showWarningMessage(
+            `Ellie is outdated [${requiredEllieVersion} > ${data}]. Updating now`
+          );
+          dontAskDownload = true;
+        }
+      }
+      if (
+        data[0] == "v" &&
+        (data.slice(0, data.length - 1) == requiredEllieVersion ||
+          isCustomServer)
+      ) {
+        resolve(true);
+      } else {
+        resolve(false);
+      }
+    });
+    process.on("error", (err) => {
+      resolve(false);
+    });
+  });
+}
