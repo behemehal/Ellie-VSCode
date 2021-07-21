@@ -18,14 +18,14 @@
 		{
 			"comment": "Keyword",
 			"name": "keyword.other.ellie",
-			"match": "\\b(v|d)\\b"
+			"match": "\\b(v|d|c)\\b"
 		}
 	],
 	"repository": {
 		"keywords": {
 			"patterns": [{
 				"name": "keyword.control.ellie",
-				"match": "\\b(if|foreach|loop|for|return)\\b"
+				"match": "\\b(if|foreach|loop|for|ret|fn|import)\\b"
 			},
 			{
 				"comment": "logical AND, borrow references",
@@ -41,6 +41,11 @@
 				"comment": "single equal",
 				"name": "keyword.operator.assignment.equal.ellie",
 				"match": "(?<![<>])=(?!=|>)"
+			},
+			{
+				"comment": "Integer literal (octal)",
+				"name": "constant.numeric.integer.octal.ellie",
+				"match": "[0-9]"
 			},
 			{
 				"comment": "comparison operators",
@@ -76,7 +81,7 @@
 		"core_types": {
 			"comment": "Built-in/core type",
 			"name": "storage.type.core.ellie",
-			"match": "\\b(bool|string|char)\\b"
+			"match": "\\b(bool|string|char|void|collective|array|dynamicArray)\\b"
 		},
 		"line_comment": {
 			"comment": "Single-line comment",

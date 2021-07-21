@@ -1,2 +1,4 @@
 node_modules
 *.vsix
+old.text
+./syntaxes/old.json

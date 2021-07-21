@@ -11,6 +11,7 @@ var CodeLensProvider = require("./codeLens");
 var debugHeadersDecorator = require("./debugHeadersDecorator");
 var syntaxRuntime = "ellie";
 var syntaxErrors = vscode.languages.createDiagnosticCollection("test");
+var checkSyntax = false;
 var keypressSlowdown = 250;
 var keypressTimer = null;
 var serverPath = "";
@@ -34,7 +35,8 @@ async function requestMap(context, document) {
         debugHeadersDecorator(activeEditor);
       } else if (
         vscode.window.activeTextEditor?.document?.languageId == "ellie" &&
-        !!vscode.window.activeTextEditor?.document?.fileName
+        !!vscode.window.activeTextEditor?.document?.fileName &&
+        checkSyntax
       ) {
         var diagnostics = [];
         lib
@@ -44,39 +46,52 @@ async function requestMap(context, document) {
             "-je",
           ])
           .then((returned) => {
-            var errors = returned
-              .split("+")
-              .filter((x) => x != "")
-              .map((x) =>
-                JSON.parse(JSON.parse(x.trim().replaceAll("\\'", "'")))
+            if (returned.includes("thread") && returned.includes("panicked")) {
+              checkSyntax = false;
+              vscode.window.showErrorMessage(
+                "Ellie failed to parse the file and will not continue to provide syntax error checks. Please report this issue with your code",
+                "Open Ellie's Github Issues"
               );
-
-            for (error in errors) {
-              var error = errors[error];
-              diagnostics.push(
-                new vscode.Diagnostic(
-                  new vscode.Range(
-                    new vscode.Position(
-                      error.pos.range_start[0],
-                      error.pos.range_start[1]
+              diagnostics = [];
+            } else if (returned.includes("+") && returned.includes("*")) {
+              var errors = returned
+                .split("*")[1]
+                .split("+")
+                .filter((x) => x != "")
+                .map((x) => x.replaceAll("\\'", "'"))
+                .map(JSON.parse)
+                .map(JSON.parse);
+              for (error in errors) {
+                var error = errors[error];
+                diagnostics.push(
+                  new vscode.Diagnostic(
+                    new vscode.Range(
+                      new vscode.Position(
+                        error.pos.range_start[0],
+                        error.pos.range_start[1]
+                      ),
+                      new vscode.Position(
+                        error.pos.range_end[0],
+                        error.pos.range_end[1]
+                      )
                     ),
-                    new vscode.Position(
-                      error.pos.range_end[0],
-                      error.pos.range_end[1]
-                    )
-                  ),
-                  `${error.title}: ${error.builded_message.builded}`,
-                  vscode.DiagnosticSeverity.Error
-                )
-              );
+                    `${error.title}: ${error.builded_message.builded}`,
+                    vscode.DiagnosticSeverity.Error
+                  )
+                );
+              }
+            } else {
+              diagnostics = [];
             }
-            syntaxErrors.set(vscode.window.activeTextEditor.document.uri, diagnostics);
+            syntaxErrors.set(
+              vscode.window.activeTextEditor.document.uri,
+              diagnostics
+            );
           })
           .catch((err) => {
             console.log(err);
           });
       }
-      console.log(checkFile);
     }
   }
 }
@@ -101,6 +116,7 @@ function activate(context) {
       serverPath = lib.resolveElliePath(ellieFoundType);
       statusBar.text = "Ellie is ready";
       ellieExist = true;
+      checkSyntax = true;
       lib
         .runCommand(serverPath, ["-v"])
         .then((returned) => {
