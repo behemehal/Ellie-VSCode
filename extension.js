@@ -16,6 +16,7 @@ var keypressSlowdown = 250;
 var keypressTimer = null;
 var serverPath = "";
 var ellieExist = false;
+var supported = "v2.6.0";
 
 async function requestMap(context, document) {
   if (vscode.workspace.getConfiguration("ellie").get("syntaxCheck")) {
@@ -39,12 +40,17 @@ async function requestMap(context, document) {
         checkSyntax
       ) {
         var diagnostics = [];
+        var params = !vscode.window.activeTextEditor?.document.isUntitled
+          ? [vscode.window.activeTextEditor?.document?.fileName, "-se", "-je"]
+          : [
+              "-se",
+              "-je",
+              "-ec",
+              '"' + vscode.window.activeTextEditor.document.getText() + '"',
+            ];
+
         lib
-          .runCommand(serverPath, [
-            vscode.window.activeTextEditor?.document?.fileName,
-            "-se",
-            "-je",
-          ])
+          .runCommand(serverPath, params)
           .then((returned) => {
             if (returned.includes("thread") && returned.includes("panicked")) {
               checkSyntax = false;
@@ -121,13 +127,20 @@ function activate(context) {
         .runCommand(serverPath, ["-v"])
         .then((returned) => {
           var version = returned.split("Ellie")[1].split("-")[0].trim();
-          var code = returned
-            .split("Ellie")[1]
-            .split("-")[1]
-            .split(":")[1]
-            .trim();
-          vscode.window.showInformationMessage("Ellie " + version);
-          statusBar.text = "Ellie " + version;
+          if (supported == version) {
+            var code = returned
+              .split("Ellie")[1]
+              .split("-")[1]
+              .split(":")[1]
+              .trim();
+            vscode.window.showInformationMessage("Ellie " + version);
+            statusBar.text = "Ellie " + version;
+          } else {
+            vscode.window.showErrorMessage(
+              `Supported ellie version by extension is ${version}, ellie version is: ${supported} features disabled`
+            );
+            checkSyntax = false;
+          }
         })
         .catch((err) => {
           console.log(err);
@@ -154,24 +167,29 @@ function activate(context) {
           "utf8"
         )
         .toString();
-      var path = fileData
-        .split(whichLineEnding(fileData))
+      var pathFile = fileData
+        .split(lib.whichLineEnding(fileData))
         [args.start._line].split(":")
         .slice(1)
         .join(":")
         .trim();
-      var absPath =
-        vscode.workspace.rootPath + path.replace(".", "").split(":")[0];
-      var absLine =
-        vscode.workspace.rootPath + path.replace(".", "").split(":")[1];
-      var setting = vscode.Uri.parse(vscode.workspace.rootPath + absPath);
-      vscode.workspace.openTextDocument(setting).then((a) => {
-        vscode.window.showTextDocument(a, 1, false).then((e) => {
-          //ellie
-          console.log(e);
+      var absPath = path.resolve(
+        vscode.workspace.rootPath + pathFile.replace(".", "").split(":")[0]
+      );
+      var absLine = Number(pathFile.split(":")[1]);
+      var setting = vscode.Uri.file(absPath);
+      vscode.workspace
+        .openTextDocument(setting)
+        .then((a) => {
+          return vscode.window.showTextDocument(a, absLine, false).then((q) => {
+            let range = q.document.lineAt(absLine - 1).range;
+            q.selection = new vscode.Selection(range.start, range.end);
+            q.revealRange(range);
+          });
+        })
+        .catch((err) => {
+          console.log("1Error: ", err);
         });
-      });
-      //vscode.window.showTextDocument(path)
       vscode.window.showInformationMessage(
         `CodeLens action clicked with args=${args}`
       );
