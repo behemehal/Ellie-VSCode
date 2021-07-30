@@ -7,97 +7,135 @@ const fs = require("fs");
 const path = require("path");
 const lib = require("./lib");
 
+const ellieOutput = vscode.window.createOutputChannel(`Ellie Output`);
 var CodeLensProvider = require("./codeLens");
+var EllieSyntaxWarns = require("./ellieSyntax");
 var debugHeadersDecorator = require("./debugHeadersDecorator");
 var syntaxRuntime = "ellie";
-var syntaxErrors = vscode.languages.createDiagnosticCollection("test");
+var syntaxErrors = vscode.languages.createDiagnosticCollection("syntax");
 var checkSyntax = false;
 var keypressSlowdown = 250;
 var keypressTimer = null;
+var busy = false;
 var serverPath = "";
+var version;
 var ellieExist = false;
-var supported = "v2.6.0";
+var supported = "v2.7.0";
+var statusBar = vscode.window.createStatusBarItem(
+  vscode.StatusBarAlignment.Right,
+  100
+);
 
 async function requestMap(context, document) {
-  if (vscode.workspace.getConfiguration("ellie").get("syntaxCheck")) {
-    var checkFile =
-      document?.scheme == "untitled" ||
-      document?.scheme == "file" ||
-      vscode.window.activeTextEditor?.document.languageId ==
-        "EllieDebugHeaders" ||
-      vscode.window.activeTextEditor?.document?.languageId == "ellie";
-    var activeEditor =
-      vscode.window.activeTextEditor ?? vscode.window.visibleTextEditors[0];
-    if (checkFile && activeEditor) {
-      if (
-        vscode.window.activeTextEditor?.document?.languageId ==
-        "EllieDebugHeaders"
-      ) {
-        debugHeadersDecorator(activeEditor);
-      } else if (
-        vscode.window.activeTextEditor?.document?.languageId == "ellie" &&
-        !!vscode.window.activeTextEditor?.document?.fileName &&
-        checkSyntax
-      ) {
-        var diagnostics = [];
-        var params = !vscode.window.activeTextEditor?.document.isUntitled
-          ? [vscode.window.activeTextEditor?.document?.fileName, "-se", "-je"]
-          : [
-              "-se",
-              "-je",
-              "-ec",
-              '"' + vscode.window.activeTextEditor.document.getText() + '"',
-            ];
+  if (keypressTimer == null) {
+    if (vscode.workspace.getConfiguration("ellie").get("syntaxCheck")) {
+      var checkFile =
+        document?.scheme == "untitled" ||
+        document?.scheme == "file" ||
+        vscode.window.activeTextEditor?.document.languageId ==
+          "EllieDebugHeaders" ||
+        vscode.window.activeTextEditor?.document?.languageId == "ellie";
+      var activeEditor =
+        vscode.window.activeTextEditor ?? vscode.window.visibleTextEditors[0];
+      if (checkFile && activeEditor) {
+        if (
+          vscode.window.activeTextEditor?.document?.languageId ==
+          "EllieDebugHeaders"
+        ) {
+          debugHeadersDecorator(activeEditor);
+        } else if (
+          vscode.window.activeTextEditor?.document?.languageId == "ellie" &&
+          !!vscode.window.activeTextEditor?.document?.fileName &&
+          checkSyntax
+        ) {
+          var fileName = vscode.window.activeTextEditor?.document?.fileName;
+          var diagnostics = [];
+          var params = !vscode.window.activeTextEditor?.document.isUntitled
+            ? [fileName, "-je", "-se"]
+            : [
+                "-se",
+                "-je",
+                "-ec",
+                JSON.stringify(
+                  vscode.window.activeTextEditor.document.getText()
+                ),
+              ];
 
-        lib
-          .runCommand(serverPath, params)
-          .then((returned) => {
-            if (returned.includes("thread") && returned.includes("panicked")) {
-              checkSyntax = false;
-              vscode.window.showErrorMessage(
-                "Ellie failed to parse the file and will not continue to provide syntax error checks. Please report this issue with your code",
-                "Open Ellie's Github Issues"
-              );
-              diagnostics = [];
-            } else if (returned.includes("+") && returned.includes("*")) {
-              var errors = returned
-                .split("*")[1]
-                .split("+")
-                .filter((x) => x != "")
-                .map((x) => x.replaceAll("\\'", "'"))
-                .map(JSON.parse)
-                .map(JSON.parse);
-              for (error in errors) {
-                var error = errors[error];
-                diagnostics.push(
-                  new vscode.Diagnostic(
-                    new vscode.Range(
-                      new vscode.Position(
-                        error.pos.range_start[0],
-                        error.pos.range_start[1]
-                      ),
-                      new vscode.Position(
-                        error.pos.range_end[0],
-                        error.pos.range_end[1]
-                      )
-                    ),
-                    `${error.title}: ${error.builded_message.builded}`,
-                    vscode.DiagnosticSeverity.Error
-                  )
+          var time = new Date().getTime();
+          lib
+            .runCommand(serverPath, params)
+            .then((returned) => {
+              if (
+                returned.includes("thread") &&
+                returned.includes("panicked")
+              ) {
+                checkSyntax = false;
+                vscode.window.showErrorMessage(
+                  "Ellie failed to parse the file and will not continue to provide syntax error checks. Please report this issue with your code",
+                  "Open Ellie's Github Issues"
                 );
+                diagnostics = [];
+              } else if (returned.includes("+") && returned.includes("*")) {
+                var errors = returned
+                  .split("*")[1]
+                  .split("+")
+                  .filter((x) => x != "")
+                  .map((x) => x.replaceAll("\\'", "'"))
+                  .map(JSON.parse)
+                  .map(JSON.parse);
+                for (error in errors) {
+                  var error = errors[error];
+                  diagnostics.push(
+                    new vscode.Diagnostic(
+                      new vscode.Range(
+                        new vscode.Position(
+                          error.pos.range_start[0],
+                          error.pos.range_start[1]
+                        ),
+                        new vscode.Position(
+                          error.pos.range_end[0],
+                          error.pos.range_end[1]
+                        )
+                      ),
+                      `${error.title}: ${error.builded_message.builded}`,
+                      vscode.DiagnosticSeverity.Error
+                    )
+                  );
+                }
+              } else {
+                if (returned.includes("-")) {
+                  var items = returned
+                    .split("/")[1]
+                    .split("-")
+                    .filter((x) => x != "")
+                    .map((x) => x.replaceAll("\\'", "'"))
+                    .map(JSON.parse)
+                    .map(JSON.parse);
+                  diagnostics = [];
+                  var warnings = new EllieSyntaxWarns(items).check();
+                  warnings.forEach((item) => {
+                    diagnostics.push(item);
+                  });
+                }
               }
-            } else {
-              diagnostics = [];
-            }
-            syntaxErrors.set(
-              vscode.window.activeTextEditor.document.uri,
-              diagnostics
-            );
-          })
-          .catch((err) => {
-            console.log(err);
-          });
+              syntaxErrors.set(
+                vscode.window.activeTextEditor.document.uri,
+                diagnostics
+              );
+              ellieOutput.append(`[Info] Parsing ${vscode.window.activeTextEditor?.document.isUntitled ? "Untitled" : fileName} took ${new Date().getTime() - time}ms\n`)
+              keypressTimer = setTimeout(() => {
+                keypressTimer = null;
+              }, keypressSlowdown);
+            })
+            .catch((err) => {
+              console.log(err);
+            });
+        }
       }
+    }
+  } else {
+    if (keypressTimer != null) {
+      console.log("TIME");
     }
   }
 }
@@ -106,14 +144,11 @@ async function requestMap(context, document) {
  * @param {vscode.ExtensionContext} context
  */
 function activate(context) {
-  var statusBar = vscode.window.createStatusBarItem(
-    vscode.StatusBarAlignment.Right,
-    100
-  );
   var ellieFoundType = lib.whichType();
 
   if (ellieFoundType != -1) {
     if (!lib.workingEllieFound(ellieFoundType)) {
+      ellieOutput.append(`[Error] Ellie is not found, syntax check disabled\n`);
       vscode.window.showErrorMessage(
         "Ellie is not found in system, install and restart your ide"
       );
@@ -126,13 +161,14 @@ function activate(context) {
       lib
         .runCommand(serverPath, ["-v"])
         .then((returned) => {
-          var version = returned.split("Ellie")[1].split("-")[0].trim();
+          version = returned.split("Ellie")[1].split("-")[0].trim();
           if (supported == version) {
             var code = returned
               .split("Ellie")[1]
               .split("-")[1]
               .split(":")[1]
               .trim();
+            ellieOutput.append(`[Info] Ellie ${version} is ready\n`);
             vscode.window.showInformationMessage("Ellie " + version);
             statusBar.text = "Ellie " + version;
           } else {
@@ -152,7 +188,7 @@ function activate(context) {
 
   vscode.workspace.findFiles("DEBUG_HEADERS.eidbg").then((file) => {
     if (file.length != 0) {
-      console.log("Modifying ellie source");
+      ellieOutput.append(`[Info] Modifying Ellie source code\n`);
       vscode.window.showInformationMessage(
         "You are modifying ellie source, highlighting debug lines for you"
       );
@@ -160,6 +196,7 @@ function activate(context) {
   });
 
   vscode.commands.registerCommand("ellie.goToError", (args) => {
+    ellieOutput.append(`[Info] Showing error from source code\n`);
     try {
       var fileData = fs
         .readFileSync(
@@ -188,17 +225,26 @@ function activate(context) {
           });
         })
         .catch((err) => {
-          console.log("1Error: ", err);
+          ellieOutput.append(`[Error] Failed to show source code file\n`);
         });
-      vscode.window.showInformationMessage(
-        `CodeLens action clicked with args=${args}`
-      );
     } catch (err) {
-      console.log(err);
+      ellieOutput.append(`[Error] Failed to show source code error\n`);
     }
   });
 
   vscode.languages.registerCodeLensProvider("*", new CodeLensProvider());
+
+  vscode.commands.registerCommand("ellie.formatFile", () => {
+    const { activeTextEditor } = vscode.window;
+    ellieOutput.append(`[Error] Ellie formating requested\n`);
+  });
+
+  vscode.languages.registerDocumentFormattingEditProvider("ellie", {
+    provideDocumentFormatingEdits: (document) => {
+      ellieOutput.append(`[Error] Ellie formating requested 2\n`);
+      return vscode.TextEdit;
+    },
+  });
 
   //vscode.languages.registerCompletionItemProvider("ellie", )
   context.subscriptions.push(
@@ -210,7 +256,9 @@ function activate(context) {
     }),
 
     vscode.window.onDidChangeActiveTextEditor((editor) => {
-      requestMap(context, editor.uri);
+      if (editor) {
+        requestMap(context, editor.uri);
+      }
     }),
 
     statusBar

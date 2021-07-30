@@ -1,9 +1,8 @@
 {
 	"$schema": "http://json-schema.org/schema#",
 	"name": "Ellie",
-	"patterns": [{
-			"include": "#keywords"
-		}, {
+	"patterns": [
+		{
 			"include": "#strings"
 		},
 		{
@@ -16,75 +15,94 @@
 			"include": "#line_comment"
 		},
 		{
-			"comment": "Keyword",
-			"name": "keyword.other.ellie",
-			"match": "\\b(v|d|c)\\b"
+			"include": "#block_comment"
+		},
+		{
+			"include": "#keywords"
 		}
 	],
 	"repository": {
+		"block_comment": {
+			"begin": "/\\*",
+            "end": "\\*/",
+            "name": "comment.block.ellie"
+		},
 		"keywords": {
-			"patterns": [{
-				"name": "keyword.control.ellie",
-				"match": "\\b(if|foreach|loop|for|ret|fn|import)\\b"
-			},
-			{
-				"comment": "logical AND, borrow references",
-				"name": "keyword.operator.borrow.and,0.rust",
-				"match": "&(?![&=])"
-			},
-			{
-				"comment": "assignment operators",
-				"name": "keyword.operator.assignment.ellie",
-				"match": "(\\+=|-=|\\*=|/=|%=|\\^=|&=|\\|=|<<=|>>=)"
-			},
-			{
-				"comment": "single equal",
-				"name": "keyword.operator.assignment.equal.ellie",
-				"match": "(?<![<>])=(?!=|>)"
-			},
-			{
-				"comment": "Integer literal (octal)",
-				"name": "constant.numeric.integer.octal.ellie",
-				"match": "[0-9]"
-			},
-			{
-				"comment": "comparison operators",
-				"name": "keyword.operator.comparison.ellie",
-				"match": "(=(=)?(?!>)|!=|<=|(?<!=)>=)"
-			},
-			{
-				"comment": "math operators",
-				"name": "keyword.operator.math.ellie",
-				"match": "(([+%]|(\\*(?!\\w)))(?!=))|(-(?!>))|(/(?!/))"
-			}
-		
-		]
+			"patterns": [
+				{
+					"match": "\\b(pri|pub)\\b",
+					"name": "storage.modifier.ellie"
+				},
+				{
+					"comment": "Keyword",
+					"name": "keyword.other.ellie",
+					"match": "\\b(v|d|c)\\b"
+				},
+				{
+					"comment": "Keyword",
+					"name": "keyword.other.ellie",
+					"match": "\\b(@)\\b"
+				},
+				{
+					"name": "keyword.control.ellie",
+					"match": "\\b(if|for|ret|fn|import|class)\\b"
+				},
+				{
+					"comment": "assignment operators",
+					"name": "keyword.operator.assignment.ellie",
+					"match": "(\\+=|-=|\\*=|/=|%=|\\^=|=)"
+				},
+				{
+					"comment": "single equal",
+					"name": "keyword.operator.assignment.equal.ellie",
+					"match": "(?<![<>])=(?!=|>)"
+				},
+				{
+					"comment": "Integer literal (octal)",
+					"name": "constant.numeric.integer.octal.ellie",
+					"match": "[0-9]"
+				},
+				{
+					"comment": "comparison operators",
+					"name": "keyword.operator.comparison.ellie",
+					"match": "(=(=)?(?!>)|!=|<=|(?<!=)>=)"
+				},
+				{
+					"comment": "math operators",
+					"name": "keyword.operator.math.ellie",
+					"match": "(([+%]|(\\*(?!\\w)))(?!=))|(-(?!>))|(/(?!/))"
+				}
+			]
 		},
 		"strings": {
 			"name": "string.quoted.double.ellie",
 			"begin": "\"",
 			"end": "\"",
-			"patterns": [{
-				"name": "constant.character.escape.ellie",
-				"match": "\\\\."
-			}]
+			"patterns": [
+				{
+					"name": "constant.character.escape.ellie",
+					"match": "\\\\."
+				}
+			]
 		},
 		"chars": {
 			"name": "string.quoted.single.ellie",
 			"begin": "(b)?(')",
 			"end": "'",
-			"patterns": [{
-				"name": "constant.character.escape.ellie",
-				"match": "\\\\."
-			}]
+			"patterns": [
+				{
+					"name": "constant.character.escape.ellie",
+					"match": "\\\\."
+				}
+			]
 		},
 		"core_types": {
 			"comment": "Built-in/core type",
 			"name": "storage.type.core.ellie",
-			"match": "\\b(bool|string|char|void|collective|array|dynamicArray)\\b"
+			"match": "\\b(bool|string|float|int|cloak|char|void|collective|array|dynamicArray)\\b"
 		},
 		"line_comment": {
-			"comment": "Single-line comment",
+			"comment": "Single-line comment",	
 			"name": "comment.line.double-slash.ellie",
 			"begin": "//",
 			"end": "$"
