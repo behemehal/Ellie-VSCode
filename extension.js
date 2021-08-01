@@ -14,13 +14,14 @@ var debugHeadersDecorator = require("./debugHeadersDecorator");
 var syntaxRuntime = "ellie";
 var syntaxErrors = vscode.languages.createDiagnosticCollection("syntax");
 var checkSyntax = false;
-var keypressSlowdown = 250;
+var keypressSlowdown = 50;
 var keypressTimer = null;
 var busy = false;
 var serverPath = "";
 var version;
 var ellieExist = false;
-var supported = "v2.7.0";
+var supported = "v2.8.1";
+var diagnostics = [];
 var statusBar = vscode.window.createStatusBarItem(
   vscode.StatusBarAlignment.Right,
   100
@@ -35,9 +36,10 @@ async function requestMap(context, document) {
         vscode.window.activeTextEditor?.document.languageId ==
           "EllieDebugHeaders" ||
         vscode.window.activeTextEditor?.document?.languageId == "ellie";
-      var activeEditor =
-        vscode.window.activeTextEditor ?? vscode.window.visibleTextEditors[0];
-      if (checkFile && activeEditor) {
+      if (
+        checkFile &&
+        vscode.window.activeTextEditor?.document?.languageId != "Log"
+      ) {
         if (
           vscode.window.activeTextEditor?.document?.languageId ==
           "EllieDebugHeaders"
@@ -49,7 +51,6 @@ async function requestMap(context, document) {
           checkSyntax
         ) {
           var fileName = vscode.window.activeTextEditor?.document?.fileName;
-          var diagnostics = [];
           var params = !vscode.window.activeTextEditor?.document.isUntitled
             ? [fileName, "-je", "-se"]
             : [
@@ -111,18 +112,24 @@ async function requestMap(context, document) {
                     .map((x) => x.replaceAll("\\'", "'"))
                     .map(JSON.parse)
                     .map(JSON.parse);
-                  diagnostics = [];
                   var warnings = new EllieSyntaxWarns(items).check();
                   warnings.forEach((item) => {
                     diagnostics.push(item);
                   });
                 }
+                diagnostics = [];
               }
               syntaxErrors.set(
                 vscode.window.activeTextEditor.document.uri,
                 diagnostics
               );
-              ellieOutput.append(`[Info] Parsing ${vscode.window.activeTextEditor?.document.isUntitled ? "Untitled" : fileName} took ${new Date().getTime() - time}ms\n`)
+              ellieOutput.append(
+                `[Info] Parsing ${
+                  vscode.window.activeTextEditor?.document.isUntitled
+                    ? "Untitled"
+                    : fileName
+                } took ${new Date().getTime() - time}ms\n`
+              );
               keypressTimer = setTimeout(() => {
                 keypressTimer = null;
               }, keypressSlowdown);
@@ -132,10 +139,6 @@ async function requestMap(context, document) {
             });
         }
       }
-    }
-  } else {
-    if (keypressTimer != null) {
-      console.log("TIME");
     }
   }
 }
@@ -173,7 +176,7 @@ function activate(context) {
             statusBar.text = "Ellie " + version;
           } else {
             vscode.window.showErrorMessage(
-              `Supported ellie version by extension is ${version}, ellie version is: ${supported} features disabled`
+              `Supported ellie version by extension is ${supported}, your ellie version is: ${supported} features disabled`
             );
             checkSyntax = false;
           }
@@ -249,14 +252,29 @@ function activate(context) {
   //vscode.languages.registerCompletionItemProvider("ellie", )
   context.subscriptions.push(
     vscode.workspace.onDidChangeTextDocument((e) => {
-      requestMap(context, e.document.uri);
+    cnsole.log("??");
+      if (
+        (e.contentChanges.length != 0 || diagnostics.length != 0) &&
+        (e.document.uri.scheme == "file" || e.document.uri.scheme == "untitled")
+      ) {
+        requestMap(context, e.document.uri);
+      }
     }),
     vscode.workspace.onDidOpenTextDocument((e) => {
-      requestMap(context, e.uri);
+      if (e.uri.scheme == "file" || e.document.uri.scheme == "untitled") {
+        requestMap(context, e.uri);
+      }
+    }),
+
+    vscode.window.onDidWriteTerminalData((event) => {
     }),
 
     vscode.window.onDidChangeActiveTextEditor((editor) => {
-      if (editor) {
+      if (
+        editor &&
+        (editor.document.uri.scheme == "file" ||
+          editor.document.uri.scheme == "untitled")
+      ) {
         requestMap(context, editor.uri);
       }
     }),

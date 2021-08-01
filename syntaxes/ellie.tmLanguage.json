@@ -41,11 +41,11 @@
 				{
 					"comment": "Keyword",
 					"name": "keyword.other.ellie",
-					"match": "\\b(@)\\b"
+					"match": "\\b(\\@)\\s\\b"
 				},
 				{
 					"name": "keyword.control.ellie",
-					"match": "\\b(if|for|ret|fn|import|class)\\b"
+					"match": "\\b(if|for|ret|fn|import|class|co)\\b"
 				},
 				{
 					"comment": "assignment operators",

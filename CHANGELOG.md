@@ -3,6 +3,9 @@
 # v0.5.0
     - # Improvements
       - Performance improved
-    
-    - # Improvements
       - Gramar updates
+    
+
+# v0.6.0
+    - # Bug fix
+      - Infinite parse loop fixed
