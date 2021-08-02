@@ -2,7 +2,7 @@
     "name": "ellie-lang",
     "displayName": "Ellie Language",
     "description": "Syntax highlighting for ellie lang",
-    "version": "0.6.1",
+    "version": "0.6.2",
     "publisher": "behemehal",
     "icon": "ellie_language.png",
     "homepage": "https://ellie.behemehal.net",
@@ -23,33 +23,55 @@
     ],
     "main": "./extension.js",
     "contributes": {
-        "languages": [{
-            "id": "ellie",
-            "aliases": ["Ellie", "ellie"],
-            "extensions": [".ei",".eiw",".eil", ".eidbg"],
-            "configuration": "./language-configuration.json"
-        },
-        {
-            "id": "EllieDebugHeaders",
-            "aliases": ["Ellie Debug Headers", "EllieDebugHeaders"],
-            "extensions": [".eidbg"]
-        }],
-        "grammars": [{
-            "language": "ellie",
-            "scopeName": "source.ellie",
-            "path": "./syntaxes/ellie.tmLanguage.json"
-        }],
+        "languages": [
+            {
+                "id": "ellie",
+                "aliases": [
+                    "Ellie",
+                    "ellie"
+                ],
+                "extensions": [
+                    ".ei",
+                    ".eiw",
+                    ".eil",
+                    ".eidbg"
+                ],
+                "configuration": "./language-configuration.json"
+            },
+            {
+                "id": "EllieDebugHeaders",
+                "aliases": [
+                    "Ellie Debug Headers",
+                    "EllieDebugHeaders"
+                ],
+                "extensions": [
+                    ".eidbg"
+                ]
+            }
+        ],
+        "grammars": [
+            {
+                "language": "ellie",
+                "scopeName": "source.ellie",
+                "path": "./syntaxes/ellie.tmLanguage.json"
+            }
+        ],
         "configuration": {
             "title": "Ellie Language",
             "ellie.format.enable": true,
             "properties": {
                 "ellie.syntaxCheck": {
-                    "type": ["boolean"],
+                    "type": [
+                        "boolean"
+                    ],
                     "default": true,
                     "description": "Enable syntax check"
                 },
                 "ellie.serverLocation": {
-                    "type": ["string", "boolean"],
+                    "type": [
+                        "string",
+                        "boolean"
+                    ],
                     "default": false,
                     "description": "Syntax check server location"
                 }

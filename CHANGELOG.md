@@ -9,3 +9,7 @@
 # v0.6.0
     - # Bug fix
       - Infinite parse loop fixed
+
+# v0.6.2
+  Bug fixes
+

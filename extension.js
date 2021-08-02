@@ -243,16 +243,14 @@ function activate(context) {
   });
 
   vscode.languages.registerDocumentFormattingEditProvider("ellie", {
-    provideDocumentFormatingEdits: (document) => {
-      ellieOutput.append(`[Error] Ellie formating requested 2\n`);
+    provideDocumentFormattingEdits(document) {
+      ellieOutput.append(`[Warning] Ellie formating requested\n`);
       return vscode.TextEdit;
     },
   });
 
-  //vscode.languages.registerCompletionItemProvider("ellie", )
   context.subscriptions.push(
     vscode.workspace.onDidChangeTextDocument((e) => {
-    cnsole.log("??");
       if (
         (e.contentChanges.length != 0 || diagnostics.length != 0) &&
         (e.document.uri.scheme == "file" || e.document.uri.scheme == "untitled")
@@ -261,12 +259,9 @@ function activate(context) {
       }
     }),
     vscode.workspace.onDidOpenTextDocument((e) => {
-      if (e.uri.scheme == "file" || e.document.uri.scheme == "untitled") {
+      if (e.uri.scheme == "file" || e.uri.scheme == "untitled") {
         requestMap(context, e.uri);
       }
-    }),
-
-    vscode.window.onDidWriteTerminalData((event) => {
     }),
 
     vscode.window.onDidChangeActiveTextEditor((editor) => {
