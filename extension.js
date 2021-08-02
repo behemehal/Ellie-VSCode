@@ -61,7 +61,7 @@ async function requestMap(context, document) {
                   vscode.window.activeTextEditor.document.getText()
                 ),
               ];
-
+          diagnostics = [];
           var time = new Date().getTime();
           lib
             .runCommand(serverPath, params)
