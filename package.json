@@ -2,7 +2,7 @@
     "name": "ellie-lang",
     "displayName": "Ellie Language",
     "description": "Syntax highlighting for ellie lang",
-    "version": "0.6.3",
+    "version": "0.7.0",
     "publisher": "behemehal",
     "icon": "ellie_language.png",
     "homepage": "https://ellie.behemehal.net",

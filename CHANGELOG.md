@@ -14,5 +14,9 @@
   Bug fixes
 
 # v0.6.3
-  Bug fix: Always remaining errors fixed
+  - # Bug fix
+    -  Always remaining errors fixed
 
+# v0.7.0
+  - # Feature
+    - Multi file error support

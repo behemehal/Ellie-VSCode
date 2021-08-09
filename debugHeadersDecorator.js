@@ -31,7 +31,7 @@ function decorate(activeEditor) {
 
   const hashDec = vscode.window.createTextEditorDecorationType({
     color: "red",
-    backgroundColor: { id: "myextension.largeNumberBackground" },
+    backgroundColor: { id: "ellie.largeNumberBackground" },
   });
 
   while ((match = lineRegEx.exec(text))) {

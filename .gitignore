@@ -1,4 +1,5 @@
 node_modules
 *.vsix
-old.text
-./syntaxes/old.json
+old.txt
+old.json
+importPath.txt

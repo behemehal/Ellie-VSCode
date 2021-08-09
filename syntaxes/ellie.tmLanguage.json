@@ -40,35 +40,34 @@
 				},
 				{
 					"comment": "Keyword",
-					"name": "keyword.other.ellie",
-					"match": "\\b(\\@)\\s\\b"
+					"name": "support.constant",
+					"match": "(\\@)((\\S)*(.))"
 				},
 				{
 					"name": "keyword.control.ellie",
-					"match": "\\b(if|for|ret|fn|import|class|co)\\b"
+					"match": "\\b(if|for|ret)\\b"
 				},
 				{
-					"comment": "assignment operators",
+					"name": "storage.type.core.ellie",
+					"match": "\\b(dyn|bool|string|float|int|cloak|char|void|collective|array|dynamicArray|fn|import|class|co|new)\\b"
+				},
+				{
 					"name": "keyword.operator.assignment.ellie",
-					"match": "(\\+=|-=|\\*=|/=|%=|\\^=|=)"
+					"match": "(\\+=|-=|\\*=|/=|%=|\\^=|=|:)"
 				},
 				{
-					"comment": "single equal",
 					"name": "keyword.operator.assignment.equal.ellie",
 					"match": "(?<![<>])=(?!=|>)"
 				},
 				{
-					"comment": "Integer literal (octal)",
 					"name": "constant.numeric.integer.octal.ellie",
 					"match": "[0-9]"
 				},
 				{
-					"comment": "comparison operators",
 					"name": "keyword.operator.comparison.ellie",
 					"match": "(=(=)?(?!>)|!=|<=|(?<!=)>=)"
 				},
 				{
-					"comment": "math operators",
 					"name": "keyword.operator.math.ellie",
 					"match": "(([+%]|(\\*(?!\\w)))(?!=))|(-(?!>))|(/(?!/))"
 				}
@@ -95,11 +94,6 @@
 					"match": "\\\\."
 				}
 			]
-		},
-		"core_types": {
-			"comment": "Built-in/core type",
-			"name": "storage.type.core.ellie",
-			"match": "\\b(bool|string|float|int|cloak|char|void|collective|array|dynamicArray)\\b"
 		},
 		"line_comment": {
 			"comment": "Single-line comment",	

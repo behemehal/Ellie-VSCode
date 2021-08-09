@@ -19,7 +19,14 @@ var lib = {
       return vscode.workspace.getConfiguration("ellie").get("serverLocation");
     }
   },
-
+  versionParse: (version) => version.split(".").map(x => Number(x)),
+  versionCheck:(current, compare) => {
+    return {
+      major: current[0] == compare[0],
+      minor: current[1] == compare[1],
+      bug: current[2] == compare[2],
+    }
+  },
   workingEllieFound: (type) => {
     if (type == 0) {
       return fs.existsSync(lib.resolveElliePath(type));

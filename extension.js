@@ -20,14 +20,25 @@ var busy = false;
 var serverPath = "";
 var version;
 var ellieExist = false;
-var supported = "v2.8.1";
-var diagnostics = [];
+var supported = "3.0.2";
+var diagnostics = {};
 var statusBar = vscode.window.createStatusBarItem(
   vscode.StatusBarAlignment.Right,
   100
 );
 
 async function requestMap(context, document) {
+  Object.entries(diagnostics).forEach((entry) => {
+    diagnostics[entry[0]] = [];
+    if (entry[0] == "<eval>") {
+      syntaxErrors.set(
+        vscode.Uri.file(vscode.window.activeTextEditor.document.uri),
+        []
+      );
+    } else {
+      syntaxErrors.set(vscode.Uri.file(entry[0]), []);
+    }
+  });
   if (keypressTimer == null) {
     if (vscode.workspace.getConfiguration("ellie").get("syntaxCheck")) {
       var checkFile =
@@ -44,7 +55,9 @@ async function requestMap(context, document) {
           vscode.window.activeTextEditor?.document?.languageId ==
           "EllieDebugHeaders"
         ) {
-          debugHeadersDecorator(activeEditor);
+          if (!!vscode.window.activeTextEditor) {
+            debugHeadersDecorator(vscode.window.activeTextEditor);
+          }
         } else if (
           vscode.window.activeTextEditor?.document?.languageId == "ellie" &&
           !!vscode.window.activeTextEditor?.document?.fileName &&
@@ -61,7 +74,11 @@ async function requestMap(context, document) {
                   vscode.window.activeTextEditor.document.getText()
                 ),
               ];
-          diagnostics = [];
+          /*
+          diagnostics.forEach((file) => {
+            e = [];
+          });
+          */
           var time = new Date().getTime();
           lib
             .runCommand(serverPath, params)
@@ -71,11 +88,37 @@ async function requestMap(context, document) {
                 returned.includes("panicked")
               ) {
                 checkSyntax = false;
-                vscode.window.showErrorMessage(
-                  "Ellie failed to parse the file and will not continue to provide syntax error checks. Please report this issue with your code",
-                  "Open Ellie's Github Issues"
+                ellieOutput.append(
+                  `[Error] Ellie failed to parse the file and will not continue to provide syntax error checks.\n`
                 );
-                diagnostics = [];
+                vscode.window
+                  .showErrorMessage(
+                    "Ellie failed to parse the file and will not continue to provide syntax error checks. Please report this issue with your code",
+                    "Open Ellie's Github Issues",
+                    "Re-enable"
+                  )
+                  .then((result) => {
+                    if (result == "Open Ellie's Github Issues") {
+                      vscode.env.openExternal(
+                        vscode.Uri.parse(
+                          "https://github.com/behemehal/Ellie-Language/issues/new?assignees=ahmtcn123&labels=bug&template=bug_report.md&title=Ellie%20Parser%20Failure"
+                        )
+                      );
+                    } else if (result == "Re-enable") {
+                      ellieOutput.append(
+                        `[Warning] Ignoring ellie parsing error\n`
+                      );
+                      checkSyntax = true;
+                    }
+                  })
+                  .catch((err) => {
+                    console.log(err);
+                  });
+                /*
+                diagnostics.forEach((file) => {
+                  e = [];
+                });
+                */
               } else if (returned.includes("+") && returned.includes("*")) {
                 var errors = returned
                   .split("*")[1]
@@ -86,7 +129,10 @@ async function requestMap(context, document) {
                   .map(JSON.parse);
                 for (error in errors) {
                   var error = errors[error];
-                  diagnostics.push(
+                  if (!!!diagnostics[error.path]) {
+                    diagnostics[error.path] = [];
+                  }
+                  diagnostics[error.path].push(
                     new vscode.Diagnostic(
                       new vscode.Range(
                         new vscode.Position(
@@ -103,26 +149,20 @@ async function requestMap(context, document) {
                     )
                   );
                 }
-              } else {
-                if (returned.includes("-")) {
-                  var items = returned
-                    .split("/")[1]
-                    .split("-")
-                    .filter((x) => x != "")
-                    .map((x) => x.replaceAll("\\'", "'"))
-                    .map(JSON.parse)
-                    .map(JSON.parse);
-                  var warnings = new EllieSyntaxWarns(items).check();
-                  warnings.forEach((item) => {
-                    diagnostics.push(item);
-                  });
-                }
-                diagnostics = [];
               }
-              syntaxErrors.set(
-                vscode.window.activeTextEditor.document.uri,
-                diagnostics
-              );
+
+              Object.entries(diagnostics).forEach((entry) => {
+                if (entry[0] == "<eval>") {
+                  syntaxErrors.set(
+                    vscode.Uri.file(
+                      vscode.window.activeTextEditor.document.uri
+                    ),
+                    entry[1]
+                  );
+                } else {
+                  syntaxErrors.set(vscode.Uri.file(entry[0]), entry[1]);
+                }
+              });
               ellieOutput.append(
                 `[Info] Parsing ${
                   vscode.window.activeTextEditor?.document.isUntitled
@@ -165,19 +205,81 @@ function activate(context) {
         .runCommand(serverPath, ["-v"])
         .then((returned) => {
           version = returned.split("Ellie")[1].split("-")[0].trim();
-          if (supported == version) {
+          var parsed_supported = lib.versionParse(supported);
+          var parsed_current = lib.versionParse(version.replace("v", ""));
+          var version_check = lib.versionCheck(
+            parsed_supported,
+            parsed_current
+          );
+          var extension_update =
+            parsed_supported[0] > parsed_current[0]
+              ? false
+              : parsed_supported[0] == parsed_current[0]
+              ? parsed_supported[1] > parsed_current[1]
+                ? false
+                : parsed_supported[1] == parsed_current[1]
+                ? parsed_supported[2] < parsed_current[2]
+                : true
+              : true;
+
+          if (version_check.major && version_check.minor) {
             var code = returned
               .split("Ellie")[1]
               .split("-")[1]
               .split(":")[1]
               .trim();
-            ellieOutput.append(`[Info] Ellie ${version} is ready\n`);
+
+            if (version_check.bug) {
+              ellieOutput.append(`[Info] Ellie ${version} is ready\n`);
+            } else {
+              ellieOutput.append(
+                `[Info] Ellie ${version} is ready, but update might be necessary\n`
+              );
+              vscode.window
+                .showWarningMessage(
+                  `Supported ellie version by extension is not same with your ellie, continuing anyway`,
+                  extension_update
+                    ? "Check Extension Releases"
+                    : "Check Ellie Releases"
+                )
+                .then((label) => {
+                  if (label == "Check Extension Releases") {
+                    vscode.env.openExternal(
+                      vscode.Uri.parse("vscode:extension/behemehal.ellie-lang")
+                    );
+                  } else if (label == "Check Ellie Releases") {
+                    vscode.env.openExternal(
+                      vscode.Uri.parse(
+                        "https://github.com/behemehal/Ellie-Language/releases"
+                      )
+                    );
+                  }
+                });
+            }
             vscode.window.showInformationMessage("Ellie " + version);
             statusBar.text = "Ellie " + version;
           } else {
-            vscode.window.showErrorMessage(
-              `Supported ellie version by extension is ${supported}, your ellie version is: ${supported} features disabled`
-            );
+            vscode.window
+              .showErrorMessage(
+                `Supported ellie version by extension is ${supported}, your ellie version is: ${version} features disabled`,
+                extension_update
+                  ? "Check Extension Releases"
+                  : "Check Ellie Releases"
+              )
+              .then((label) => {
+                if (label == "Check Extension Releases") {
+                  vscode.env.openExternal(
+                    vscode.Uri.parse("vscode:extension/behemehal.ellie-lang")
+                  );
+                } else if (label == "Check Ellie Releases") {
+                  vscode.env.openExternal(
+                    vscode.Uri.parse(
+                      "https://github.com/behemehal/Ellie-Language/releases"
+                    )
+                  );
+                }
+              });
+
             checkSyntax = false;
           }
         })
@@ -239,12 +341,12 @@ function activate(context) {
 
   vscode.commands.registerCommand("ellie.formatFile", () => {
     const { activeTextEditor } = vscode.window;
-    ellieOutput.append(`[Error] Ellie formating requested\n`);
+    ellieOutput.append(`[Error] Ellie formatting requested\n`);
   });
 
   vscode.languages.registerDocumentFormattingEditProvider("ellie", {
     provideDocumentFormattingEdits(document) {
-      ellieOutput.append(`[Warning] Ellie formating requested\n`);
+      ellieOutput.append(`[Warning] Ellie formatting requested\n`);
       return vscode.TextEdit;
     },
   });
